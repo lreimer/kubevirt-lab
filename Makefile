@@ -1,5 +1,6 @@
 GCP_PROJECT ?= cloud-native-experience-lab
 GCP_REGION ?= europe-north1
+KUBEVIRT_VERSION ?= $(shell curl -s https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
 
 prepare-gcp:
 	@gcloud config set project $(GCP_PROJECT)
@@ -7,19 +8,22 @@ prepare-gcp:
 
 create-gke-cluster:
 	@gcloud container clusters create kubevirt-lab \
-		--release-channel regular \
-		--region $(GCP_REGION)  \
-		--cluster-version 1.29 \
+		--release-channel=regular \
+		--region=$(GCP_REGION)  \
+		--cluster-version=1.29 \
+		--addons=HttpLoadBalancing,HorizontalPodAutoscaling \
+		--machine-type=e2-standard-8 \
 		--enable-autoscaling \
-		--min-nodes 1 \
-		--max-nodes 3 \
+		--autoscaling-profile=optimize-utilization \
+        --num-nodes=1 \
+		--min-nodes=1 --max-nodes=3 \
 		--enable-autorepair \
 		--enable-vertical-pod-autoscaling \
-		--enable-ip-alias \
-		# --enable-master-authorized-networks \
-		# --master-authorized-networks 192.168.235.0/24,185.91.50.0/24 \
-		--addons HttpLoadBalancing,HorizontalPodAutoscaling \
-		--machine-type n1-standard-4
+		--enable-ip-alias		
+
+bootstrap-kubevirt:
+	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-operator.yaml
+	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-cr.yaml
 
 delete-gke-cluster:
-	@gcloud container clusters delete kubevirt-lab --region $(GCP_REGION)
+	@gcloud container clusters delete kubevirt-lab --region=$(GCP_REGION) --async --quiet
