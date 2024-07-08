@@ -12,14 +12,18 @@ create-gke-cluster:
 		--region=$(GCP_REGION)  \
 		--cluster-version=1.29 \
 		--addons=HttpLoadBalancing,HorizontalPodAutoscaling \
-		--machine-type=e2-standard-8 \
+		--machine-type=n2-standard-8 \
 		--enable-autoscaling \
 		--autoscaling-profile=optimize-utilization \
         --num-nodes=1 \
 		--min-nodes=1 --max-nodes=3 \
 		--enable-autorepair \
 		--enable-vertical-pod-autoscaling \
-		--enable-ip-alias		
+		--enable-ip-alias \
+		--enable-nested-virtualization \
+		--node-labels=nested-virtualization=enabled	
+	@kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$$(gcloud config get-value core/account)
+	@kubectl cluster-info
 
 bootstrap-kubevirt:
 	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-operator.yaml
