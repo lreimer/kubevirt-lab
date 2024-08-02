@@ -1,6 +1,7 @@
 GCP_PROJECT ?= cloud-native-experience-lab
 GCP_REGION ?= europe-north1
 KUBEVIRT_VERSION ?= $(shell curl -s https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
+CDI_VERSION ?= $(shell basename `curl -s -w %{redirect_url} https://github.com/kubevirt/containerized-data-importer/releases/latest`)
 
 prepare-gcp:
 	@gcloud config set project $(GCP_PROJECT)
@@ -11,7 +12,7 @@ create-gke-cluster:
 		--release-channel=regular \
 		--region=$(GCP_REGION)  \
 		--cluster-version=1.29 \
-		--addons=HttpLoadBalancing,HorizontalPodAutoscaling \
+		--addons=HttpLoadBalancing,HorizontalPodAutoscaling,GcePersistentDiskCsiDriver \
 		--machine-type=n2-standard-8 \
 		--enable-autoscaling \
 		--autoscaling-profile=optimize-utilization \
@@ -28,6 +29,10 @@ create-gke-cluster:
 bootstrap-kubevirt:
 	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-operator.yaml
 	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-cr.yaml
+
+bootstrap-cdi:
+	@kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDI_VERSION}/cdi-operator.yaml
+	@kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDI_VERSION}/cdi-cr.yaml
 
 delete-gke-cluster:
 	@gcloud container clusters delete kubevirt-lab --region=$(GCP_REGION) --async --quiet
