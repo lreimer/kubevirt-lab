@@ -1,6 +1,6 @@
 GCP_PROJECT ?= cloud-native-experience-lab
 GCP_REGION ?= europe-north1
-KUBEVIRT_VERSION ?= $(shell curl -s https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
+KUBEVIRT_VERSION ?= v1.5.0
 CDI_VERSION ?= $(shell basename `curl -s -w %{redirect_url} https://github.com/kubevirt/containerized-data-importer/releases/latest`)
 
 prepare-gcp:
@@ -11,24 +11,22 @@ create-gke-cluster:
 	@gcloud container clusters create kubevirt-lab \
 		--release-channel=regular \
 		--region=$(GCP_REGION)  \
-		--cluster-version=1.29 \
+		--cluster-version=1.32 \
 		--addons=HttpLoadBalancing,HorizontalPodAutoscaling,GcePersistentDiskCsiDriver \
 		--machine-type=n2-standard-8 \
 		--enable-autoscaling \
-		--autoscaling-profile=optimize-utilization \
         --num-nodes=1 \
 		--min-nodes=1 --max-nodes=3 \
 		--enable-autorepair \
-		--enable-vertical-pod-autoscaling \
 		--enable-ip-alias \
 		--enable-nested-virtualization \
-		--node-labels=nested-virtualization=enabled	
+		--node-labels=node-role.kubernetes.io/worker="",nested-virtualization=enabled
 	@kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$$(gcloud config get-value core/account)
 	@kubectl cluster-info
 
 bootstrap-kubevirt:
 	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-operator.yaml
-	@kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-cr.yaml
+	@kubectl create -f kubevirt/kubevirt-cr.yaml
 
 bootstrap-cdi:
 	@kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDI_VERSION}/cdi-operator.yaml
